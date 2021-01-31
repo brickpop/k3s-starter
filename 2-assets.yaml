@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assets-nginx
+  labels:
+    app: assets-nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: assets-nginx
+  template:
+    metadata:
+      labels:
+        app: assets-nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-volume
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html-volume
+        configMap:
+          name: assets-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assets-nginx-service
+spec:
+  selector:
+    app: assets-nginx
+  ports:
+    - protocol: TCP
+      port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: assets-nginx-ingress
+  annotations:
+    #nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: "traefik"
+    traefik.frontend.rule.type: PathPrefixStrip
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /assets
+        pathType: Prefix
+        backend:
+          service:
+            name: assets-nginx-service
+            port:
+              number: 80
+
